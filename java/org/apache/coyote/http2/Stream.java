@@ -450,6 +450,12 @@ class Stream extends AbstractStream implements HeaderEmitter {
                 throw new HpackException(sm.getString("stream.header.duplicate",
                         getConnectionId(), getIdentifier(), ":authority" ));
             }
+            // Match host name with SNI if required
+            if (!handler.getProtocol().getHttp11Protocol().checkSni(handler.getSniHostName(),
+                    coyoteRequest.serverName().getString())) {
+                throw new HpackException(sm.getString("stream.host.sni", getConnectionId(), getIdentifier(), value,
+                        handler.getSniHostName()));
+            }
             break;
         }
         case "cookie": {
@@ -508,7 +514,7 @@ class Stream extends AbstractStream implements HeaderEmitter {
 
     final boolean receivedEndOfHeaders() throws ConnectionException {
         if (coyoteRequest.method().isNull() || coyoteRequest.scheme().isNull() ||
-                coyoteRequest.requestURI().isNull()) {
+                coyoteRequest.requestURI().isNull() || coyoteRequest.serverName().isNull()) {
             throw new ConnectionException(sm.getString("stream.header.required",
                     getConnectionId(), getIdentifier()), Http2Error.PROTOCOL_ERROR);
         }

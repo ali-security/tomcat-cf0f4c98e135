@@ -199,6 +199,32 @@ public class TestHttp2Section_8_1 extends Http2TestBase {
     }
 
 
+    @Test
+    public void testMissingAuthority() throws Exception {
+        // Without an :authority pseudo header there is no host name to compare
+        // with the SNI host name (strictSni) so the request has to be rejected.
+        http2Connect();
+
+        List<Header> headers = new ArrayList<>(3);
+        headers.add(new Header(":method", "GET"));
+        headers.add(new Header(":scheme", "http"));
+        headers.add(new Header(":path", "/simple"));
+
+        byte[] headersFrameHeader = new byte[9];
+        ByteBuffer headersPayload = ByteBuffer.allocate(128);
+
+        buildGetRequest(headersFrameHeader, headersPayload, null, headers, 3);
+
+        writeFrame(headersFrameHeader, headersPayload);
+
+        parser.readFrame(true);
+
+        String trace = output.getTrace();
+        Assert.assertTrue(trace, trace.contains("Goaway"));
+        Assert.assertFalse(trace, trace.contains("3-Header-[:status]-[200]"));
+    }
+
+
     private void doInvalidPseudoHeaderTest(List<Header> headers) throws Exception {
         http2Connect();
 
